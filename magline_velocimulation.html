@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>velocimulation</title>
+    <style>
+      body {
+        margin: 0;
+        background: #00110e;
+        overflow: hidden;
+      }
+      svg {
+        width: 100vw;
+        height: 100vh;
+      }
+      path {
+        stroke: rgb(0, 255, 153);
+        stroke-width: 0.5;
+        fill: none;
+      }
+    </style>
+  </head>
+  <body>
+    <svg id="canvas">
+      <path id="line" />
+    </svg>
+
+    <script>
+      const line = document.getElementById("line");
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      const baseY = height / 2;
+
+      const points = 1000; // number of segments
+      const spacing = width / (points - 1);
+
+      let targetOffsets = new Array(points).fill(0);
+      let currentOffsets = new Array(points).fill(0);
+      let velocities = new Array(points).fill(0);
+
+      document.addEventListener("pointermove", (e) => {
+        const mouseX = e.clientX;
+        const mouseY = e.clientY;
+
+        for (let i = 0; i < points; i++) {
+          const px = i * spacing;
+          const distanceX = Math.abs(px - mouseX);
+          const distanceY = Math.abs(mouseY - baseY);
+
+          // Smooth falloff: influence decreases gradually with distance
+          const cutoff = 666; // max influence radius vertically
+          let falloff = 1 - distanceY / cutoff;
+          falloff = Math.max(0, falloff); // clamp to [0,1]
+
+          // Gaussian-like horizontal spread
+          const influenceX = Math.exp((-distanceX * distanceX) / 666);
+
+          targetOffsets[i] = (mouseY - baseY) * falloff * influenceX;
+        }
+      });
+
+      function animate() {
+        let d = `M0 ${baseY + currentOffsets[0]}`;
+        for (let i = 1; i < points; i++) {
+          const force = (targetOffsets[i] - currentOffsets[i]) * 0.03;
+          velocities[i] += force;
+          velocities[i] *= 0.94;
+          currentOffsets[i] += velocities[i];
+
+          const px = i * spacing;
+          d += ` L${px} ${baseY + currentOffsets[i]}`;
+        }
+        line.setAttribute("d", d);
+        requestAnimationFrame(animate);
+      }
+      animate();
+    </script>
+  </body>
+</html>
